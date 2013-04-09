@@ -100,12 +100,16 @@ unless( $weekofyear =~/^\d+$/ && 0+$weekofyear > 0 && 0+$weekofyear < 54 ) {
 # ===
 
 my $reportFilename = "cw_" . $weekofyear . ".txt";
-my $file = "$path/$startyear/$reportFilename";
+my $dir = "$path/$startyear";
+my $file = "$dir/$reportFilename";
 
 $vars{WEEK} = $weekofyear;
 $vars{YEAR} = $startyear;
 
 unless( -e $file ) {
+  unless(-e $dir) {
+    mkdir "$dir"
+  }
   if( open FILE, ">$file" ) {
     print FILE template( \%vars );
     close FILE;
