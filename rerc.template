@@ -1,0 +1,25 @@
+# copy this to your home directory into file .rerc and customize 
+# as needed. 
+# Don't forget the colons at lines end and leave TEMPLATE at the end.
+#
+SENDER => "John Doe",
+RE_BASE => "/home/john/weekly_reports",
+
+TEMPLATE =><<ENDL
+
+Work report SENDER cw WEEK/YEAR
+
+[RED]
+
+[AMBER]
+
+[GREEN]
+
+
+
+-- 
+best regards from dragotin.
+
+ENDL
+
+
