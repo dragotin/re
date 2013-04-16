@@ -1,0 +1,22 @@
+
+re is your tool to organize weekly reports employees often have
+to write to their management.
+
+If you type 're', it opens $EDITOR with the work report of the
+current week. The work reports are collected in a directory in
+the home dir.
+
+To get started, copy the file rerc.template from the source
+directory to $HOME/.rerc and edit the data within accordingly.
+Be careful with the syntax, the rerc must contain valid perl
+hash code, ie. value => key, separated by colons.
+
+In the rerc there is a template for new report files. The strings
+SENDER, WEEK and YEAR are replaced automatically.
+
+re -l opens the report from last week.
+re -w <number> opens the week number of the current year.
+
+Have fun and make your manager happy!
+
+

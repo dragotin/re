@@ -16,13 +16,10 @@
 # This is a helper for the week report. Just call it to open the correct
 # week file.
 #
-# Do not forget to edit the
-#  $path -> the path where the reports are saved
-#  template -> The template for new files between teh ENDL s
-#  $vars -> tags that should be replaced in the template such
-#           as the SENDER var
+# Do not forget to edit the .rerc file in your home directory. Find a
+# template for .rerc in the re source dir.
 #
-# Copyright 2011-2012 Klaas Freitag <freitag@opensuse.org>
+# Copyright 2011-2013 Klaas Freitag <freitag@opensuse.org>
 #
 
 use strict;
@@ -113,7 +110,7 @@ unless( -e $file ) {
     print FILE template( \%vars );
     close FILE;
   } else {
-    print STDERR "$!\n";
+    print STDERR "Failed to open report file to write: $!\n";
   }
 }
 
