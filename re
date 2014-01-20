@@ -25,6 +25,7 @@
 use strict;
 use Date::Calc qw(:all);
 use Getopt::Std;
+use User::pwent;
 
 use vars qw ( $opt_l $opt_w %vars $tmpl);
 
@@ -44,7 +45,12 @@ if( -r "$rcfile" ) {
     $tmpl = $localvars{TEMPLATE} if( $localvars{TEMPLATE} );
     %vars = %localvars;
 }
-$vars{SENDER} = "John Doe" unless( $vars{SENDER} );
+
+if (!$vars{SENDER}) {
+    my $pw = getpwnam($ENV{USER}) || die "Could not retrieve current user name!\n";
+    my ($fullname) = split(/\s*,\s*/, $pw->gecos);
+    $vars{SENDER} = "$fullname";
+}
 
 sub template( $ )
 {
