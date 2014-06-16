@@ -20,6 +20,12 @@
 # template for .rerc in the re source dir.
 #
 # Copyright 2011-2013 Klaas Freitag <freitag@opensuse.org>
+# Copyright 2014 Juergen Weigert <jw@onncloud.com>
+#
+# 2014-06-16, jw: --help output improved.
+#                 command line usage added. Examples:
+#  $ re completed reading the newspaper
+#  $ re RED spilled some coffee
 #
 
 use strict;
@@ -27,7 +33,9 @@ use Date::Calc qw(:all);
 use Getopt::Std;
 use User::pwent;
 
-use vars qw ( $opt_l $opt_w %vars $tmpl);
+$Getopt::Std::STANDARD_HELP_VERSION++;
+use vars qw ( $VERSION $opt_l $opt_w %vars $tmpl);
+$VERSION = '1.1';
 
 # edit here:
 my $path = "/home/john/weekly_reports";
@@ -74,7 +82,7 @@ ENDL
 # never never never edit below this.
 
   while( my ($key, $value) = each(%$params)) {
-    $t =~ s/$key/$value/gmi;
+    $t =~ s/\b$key\b/$value/gm;
   }
   return $t;
 }
@@ -124,10 +132,72 @@ unless( -e $file ) {
   }
 }
 
+if (@ARGV)
+  {
+    my $section = 'GREEN';
+    my $record = join(' ', @ARGV);
+    $section = $1 if $record =~ s{^(RED|AMBER|GREEN):?\s?}{};
+    $record = '* ' . $record unless $record =~ m{^[\-\+\*\s]};
+
+    my $done = 0;
+    my @rag;
+    open(my $ifd, "<", $file) or die "cannot open $file: $!\n";
+    while (defined(my $line = <$ifd>))
+      {
+        chomp $line;
+	if ($done == 1)
+	  {
+	    push @rag, "" if $line !~ m{^\s*$};
+	    $done++; 
+	  }
+
+        push @rag, $line;
+
+	if ($line =~ m{^\s*\[$section\]})
+	  {
+	    push @rag, "";
+	    push @rag, " " . $record;
+	    $done = 1;
+	  }
+      }
+    close $ifd;
+    unless ($done)
+      {
+        push @rag, "";
+	push @rag, " " . $record;
+      }
+    my $text = join("\n", @rag);
+    print "$text\n";
+    open(my $ofd, ">", $file) or die "cannot open > $file: $!\n";
+    print $ofd $text;
+    close $ofd or die "write failed to $file: $!\n";
+    exit 0;
+  }
+
 my $vi = $ENV{EDITOR} || `which vim`;
-chop $vi;
-print " $vi $file\n";
+chomp $vi;
+print "+ $vi $file\n";
 my @args = ($vi, $file);
 system(@args);
 
 
+sub HELP_MESSAGE()
+{
+  my ($ofd, $p, $v, $s) = @_;
+  print $ofd "\nUsage: $0 [-l | -w NN] [message ...]\n";
+  print $ofd Getopt::Std::help_mess($s);
+  print $ofd qq{
+$0 -l opens the report from last week.
+$0 -w <number> opens the week number of the current year.
+
+If an optional message is provided, the message is added to 
+one of the sections of the report. The default section is GREEN. 
+If the first word of the message is an all uppercase RED, AMBER, 
+or GREEN then this is used as a section name.
+If the message text does not start with one of '*', '+', '-', or ' '
+then a '* ' prefix will be added in attempt to produce a bullet list.
+
+When called without a message, $0 will start an EDITOR.
+};
+
+}
