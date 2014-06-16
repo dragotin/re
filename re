@@ -132,8 +132,7 @@ unless( -e $file ) {
   }
 }
 
-if (@ARGV)
-  {
+if (@ARGV) {
     my $section = 'GREEN';
     my $record = join(' ', @ARGV);
     $section = $1 if $record =~ s{^(RED|AMBER|GREEN):?\s?}{};
@@ -142,27 +141,23 @@ if (@ARGV)
     my $done = 0;
     my @rag;
     open(my $ifd, "<", $file) or die "cannot open $file: $!\n";
-    while (defined(my $line = <$ifd>))
-      {
+    while (defined(my $line = <$ifd>)) {
         chomp $line;
-	if ($done == 1)
-	  {
+	if ($done == 1) {
 	    push @rag, "" if $line !~ m{^\s*$};
 	    $done++; 
 	  }
 
         push @rag, $line;
 
-	if ($line =~ m{^\s*\[$section\]})
-	  {
+	if ($line =~ m{^\s*\[$section\]}) {
 	    push @rag, "";
 	    push @rag, " " . $record;
 	    $done = 1;
 	  }
       }
     close $ifd;
-    unless ($done)
-      {
+    unless ($done) {
         push @rag, "";
 	push @rag, " " . $record;
       }
