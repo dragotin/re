@@ -4,6 +4,8 @@
 #
 SENDER => "John Doe",
 RE_BASE => "/home/john/weekly_reports",
+BULLET => '-',
+ADD_BLANK_LINES => 0,
 
 TEMPLATE =><<ENDL
 

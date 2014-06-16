@@ -54,6 +54,9 @@ if( -r "$rcfile" ) {
     %vars = %localvars;
 }
 
+$vars{BULLET} = '-' unless defined $vars{BULLET};
+$vars{ADD_BLANK_LINES} = 0  unless defined $vars{ADD_BLANK_LINES};
+
 if (!$vars{SENDER}) {
     my $pw = getpwnam($ENV{USER}) || die "Could not retrieve current user name!\n";
     my ($fullname) = split(/\s*,\s*/, $pw->gecos);
@@ -119,6 +122,7 @@ my $file = "$dir/$reportFilename";
 
 $vars{WEEK} = $weekofyear;
 $vars{YEAR} = $startyear;
+$vars{TIMESTAMP} = scalar localtime;
 
 unless( -e $file ) {
   unless(-e $dir) {
@@ -136,7 +140,7 @@ if (@ARGV) {
   my $section = 'GREEN';
   my $record = join(' ', @ARGV);
   $section = $1 if $record =~ s{^(RED|AMBER|GREEN):?\s?}{};
-  $record = '* ' . $record unless $record =~ m{^[\-\+\*\s]};
+  $record = $vars{BULLET} . ' ' . $record unless $record =~ m{^[\-\+\*\s\Q$vars{BULLET}\E]};
 
   my $done = 0;
   my @rag;
@@ -144,21 +148,21 @@ if (@ARGV) {
   while (defined(my $line = <$ifd>)) {
     chomp $line;
     if ($done == 1) {
-      push @rag, "" if $line !~ m{^\s*$};
+      push @rag, "" if $vars{ADD_BLANK_LINES} and $line !~ m{^\s*$};
       $done++; 
     }
 
     push @rag, $line;
 
     if ($line =~ m{^\s*\[$section\]}) {
-      push @rag, "";
+      push @rag, "" if $vars{ADD_BLANK_LINES};
       push @rag, " " . $record;
       $done = 1;
     }
   }
   close $ifd;
   unless ($done) {
-    push @rag, "";
+    push @rag, "" if $vars{ADD_BLANK_LINES};
     push @rag, " " . $record;
   }
   my $text = join("\n", @rag);
