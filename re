@@ -133,41 +133,41 @@ unless( -e $file ) {
 }
 
 if (@ARGV) {
-    my $section = 'GREEN';
-    my $record = join(' ', @ARGV);
-    $section = $1 if $record =~ s{^(RED|AMBER|GREEN):?\s?}{};
-    $record = '* ' . $record unless $record =~ m{^[\-\+\*\s]};
+  my $section = 'GREEN';
+  my $record = join(' ', @ARGV);
+  $section = $1 if $record =~ s{^(RED|AMBER|GREEN):?\s?}{};
+  $record = '* ' . $record unless $record =~ m{^[\-\+\*\s]};
 
-    my $done = 0;
-    my @rag;
-    open(my $ifd, "<", $file) or die "cannot open $file: $!\n";
-    while (defined(my $line = <$ifd>)) {
-        chomp $line;
-	if ($done == 1) {
-	    push @rag, "" if $line !~ m{^\s*$};
-	    $done++; 
-	  }
+  my $done = 0;
+  my @rag;
+  open(my $ifd, "<", $file) or die "cannot open $file: $!\n";
+  while (defined(my $line = <$ifd>)) {
+    chomp $line;
+    if ($done == 1) {
+      push @rag, "" if $line !~ m{^\s*$};
+      $done++; 
+    }
 
-        push @rag, $line;
+    push @rag, $line;
 
-	if ($line =~ m{^\s*\[$section\]}) {
-	    push @rag, "";
-	    push @rag, " " . $record;
-	    $done = 1;
-	  }
-      }
-    close $ifd;
-    unless ($done) {
-        push @rag, "";
-	push @rag, " " . $record;
-      }
-    my $text = join("\n", @rag);
-    print "$text\n";
-    open(my $ofd, ">", $file) or die "cannot open > $file: $!\n";
-    print $ofd $text;
-    close $ofd or die "write failed to $file: $!\n";
-    exit 0;
+    if ($line =~ m{^\s*\[$section\]}) {
+      push @rag, "";
+      push @rag, " " . $record;
+      $done = 1;
+    }
   }
+  close $ifd;
+  unless ($done) {
+    push @rag, "";
+    push @rag, " " . $record;
+  }
+  my $text = join("\n", @rag);
+  print "$text\n";
+  open(my $ofd, ">", $file) or die "cannot open > $file: $!\n";
+  print $ofd $text;
+  close $ofd or die "write failed to $file: $!\n";
+  exit 0;
+}
 
 my $vi = $ENV{EDITOR} || `which vim`;
 chomp $vi;
