@@ -16,6 +16,10 @@ SENDER, WEEK and YEAR are replaced automatically.
 
 re -l opens the report from last week.
 re -w <number> opens the week number of the current year.
+re I have just done somthing cool, and it takes me less than a minute to add it to my weekly report.
+re RED: we gonna die
+re AMBER: save me
+re UPCOMING: mabye some day I'll do this.
 
 Have fun and make your manager happy!
 
