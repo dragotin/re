@@ -3,6 +3,8 @@
 # Don't forget the commas at end of lines end and leave TEMPLATE at the end.
 #
 SENDER => "John Doe",
+GITUSER => "jnweiger",
+GITPROJ => "jnweiger",
 RE_BASE => "/home/john/weekly_reports",
 BULLET => '-',
 ADD_BLANK_LINES => 0,
@@ -18,9 +20,12 @@ Work report SENDER cw WEEK/YEAR
 [GREEN]
 
 
+[UPCOMING]
+https://github.com/search?q=is:open+type:issue+assignee:GITUSER+user:GITPROJ
+ 
 
 -- 
-best regards from dragotin.
+best regards from GITUSER.
 
 ENDL
 
