@@ -8,6 +8,9 @@ GITPROJ => "jnweiger",
 RE_BASE => "/home/john/weekly_reports",
 BULLET => '-',
 ADD_BLANK_LINES => 0,
+PROPAGATE => 'UPCOMING,ATTENTION',
+SECTION_MARKER => '[',
+DEFAULT_SECTION => 'GREEN',
 
 TEMPLATE =><<ENDL
 
