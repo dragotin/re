@@ -31,6 +31,8 @@
 #              sub find_sections() added. RED/AMBER/GREEN no longer hard coded.
 #              Section name prefix with colon is sufficient, to match section.
 #
+# 2015-01-31, jw: PROPAGATE started.
+#
 # If we have a section name [SUPPORT], we can add a record to that section by saying 
 #  $ re SUP: Help Carlos
 
@@ -99,71 +101,10 @@ ENDL
   return $t;
 }
 
-### Main starts here
+sub insert_record
+{
+  my ($file, $section, $record) = @_;
 
-getopts('lw:');
-
-my ($startyear, $startmonth, $startday) = Today();
-my $weekofyear = (Week_of_Year ($startyear,$startmonth,$startday))[0];
-
-if( $opt_l ) {
-  $weekofyear--;
-  if( $weekofyear == 0 ) {
-    print STDERR "Better make holiday than writing work reports!\n";
-    exit 1;
-  }
-}
-
-if( $opt_w ) {
-  $weekofyear = $opt_w;
-}
-
-unless( $weekofyear =~/^\d+$/ && 0+$weekofyear > 0 && 0+$weekofyear < 54 ) {
-  print STDERR "Better give me a good week number, not $weekofyear!\n";
-  exit 1;
-}
-
-# ===
-
-my $reportFilename = "cw_" . $weekofyear . ".txt";
-my $dir = "$path/$startyear";
-my $file = "$dir/$reportFilename";
-
-$vars{WEEK} = $weekofyear;
-$vars{YEAR} = $startyear;
-$vars{TIMESTAMP} = scalar localtime;
-
-unless( -e $file ) {
-  unless(-e $dir) {
-    mkdir "$dir"
-  }
-  if( open FILE, ">$file" ) {
-    print FILE template( \%vars );
-    close FILE;
-  } else {
-    print STDERR "Failed to open report file to write: $!\n";
-  }
-}
-
-if (@ARGV) {
-  my $section = $vars{DEFAULT_SECTION};
-  my $record = join(' ', @ARGV);
-  my @sections = find_sections($file, $vars{SECTION_MARKER});
-  my $section_pat = join('|', map { "\Q$_\E" } @sections);
-  
-  if ($record =~ m{^([A-Z_]+):})
-    {
-      my $sect = $1;
-      my $section_pat2 = join("#", @sections);
-      if ("#$section_pat2#" =~ m{#(\Q$sect\E.*?)#})
-        {
-	  # expand a section prefix to full name
-	  $section = $1;
-	  $record =~ s{^\Q$sect\E:?\s*}{};
-	  print "section=$section\n";
-	}
-    }
-  $section = $1 if $record =~ s{^($section_pat):?\s?}{};
   $record = $vars{BULLET} . ' ' . $record unless $record =~ m{^[\-\+\*\s\Q$vars{BULLET}\E]};
   # print "section=$section, record=$record\n";
 
@@ -195,6 +136,100 @@ if (@ARGV) {
   open(my $ofd, ">", $file) or die "cannot open > $file: $!\n";
   print $ofd $text;
   close $ofd or die "write failed to $file: $!\n";
+}
+
+sub propagate_section
+{
+  my ($section, $prev, $file) = @_;
+  my $text = "FIXME: propagate_section('$section','$prev') not impl.\n";
+  if ( -f $prev )
+    {
+      # TODO: pull text from section
+    }
+  else
+    {
+      $text = "PROPAGATE ERROR: cannot open file '$prev' ($!).\nPlease see yourself for items that should be propagated here.\n";
+    }
+  insert_record($file, $section, $text);
+}
+
+### Main starts here
+
+getopts('lw:');
+
+my ($startyear, $startmonth, $startday) = Today();
+my $weekofyear = (Week_of_Year ($startyear,$startmonth,$startday))[0];
+
+if( $opt_l ) {
+  $weekofyear--;
+  if( $weekofyear == 0 ) {
+    print STDERR "Better make holiday than writing work reports!\n";
+    exit 1;
+  }
+}
+
+if( $opt_w ) {
+  $weekofyear = $opt_w;
+}
+
+unless( $weekofyear =~/^\d+$/ && 0+$weekofyear > 0 && 0+$weekofyear < 54 ) {
+  print STDERR "Better give me a good week number, not $weekofyear!\n";
+  exit 1;
+}
+
+# ===
+
+my $reportFilename = "cw_" . $weekofyear . ".txt";
+my $dir = "$path/$startyear";
+my $file = "$dir/$reportFilename";
+my $prev = "$dir/cw_" . ($weekofyear-1) . ".txt";
+
+$vars{WEEK} = $weekofyear;
+$vars{YEAR} = $startyear;
+$vars{TIMESTAMP} = scalar localtime;
+
+
+unless( -e $file ) {
+  unless(-e $dir) {
+    mkdir "$dir"
+  }
+
+  if( open FILE, ">$file" ) {
+    print FILE template( \%vars );
+    close FILE;
+    if ($vars{PROPAGATE})
+      {
+        for my $section (split(/[,\s]+/, $vars{PROPAGATE}))
+	  {
+	    propagate_section($section, $prev, $file);
+	  }
+      }
+  } else {
+    print STDERR "Failed to open report file to write: $!\n";
+  }
+}
+
+if (@ARGV) {
+  my $section = $vars{DEFAULT_SECTION};
+  my $record = join(' ', @ARGV);
+  my @sections = find_sections($file, $vars{SECTION_MARKER});
+  my $section_pat = join('|', map { "\Q$_\E" } @sections);
+  
+  if ($record =~ m{^([A-Z_]+):})
+    {
+      my $sect = $1;
+      my $section_pat2 = join("#", @sections);
+      if ("#$section_pat2#" =~ m{#(\Q$sect\E.*?)#})
+        {
+	  # expand a section prefix to full name
+	  $section = $1;
+	  $record =~ s{^\Q$sect\E:?\s*}{};
+	  print "section=$section\n";
+	}
+    }
+  $section = $1 if $record =~ s{^($section_pat):?\s?}{};
+
+  insert_record($file, $section, $record);
   exit 0;
 }
 
