@@ -27,15 +27,24 @@
 #  $ re completed reading the newspaper
 #  $ re RED spilled some coffee
 #
+# 2014-11-24, jw: Section name parser improved:
+#              sub find_sections() added. RED/AMBER/GREEN no longer hard coded.
+#              Section name prefix with colon is sufficient, to match section.
+#
+# 2015-01-31, jw: PROPAGATE started.
+#
+# If we have a section name [SUPPORT], we can add a record to that section by saying 
+#  $ re SUP: Help Carlos
 
 use strict;
 use Date::Calc qw(:all);
 use Getopt::Std;
 use User::pwent;
+use Data::Dumper;
 
 $Getopt::Std::STANDARD_HELP_VERSION++;
 use vars qw ( $VERSION $opt_l $opt_w %vars $tmpl);
-$VERSION = '1.1';
+$VERSION = '1.2';
 
 # edit here:
 my $path = "/home/john/weekly_reports";
@@ -55,7 +64,9 @@ if( -r "$rcfile" ) {
 }
 
 $vars{BULLET} = '-' unless defined $vars{BULLET};
+$vars{SECTION_MARKER} = '[' unless defined $vars{SECTION_MARKER};
 $vars{ADD_BLANK_LINES} = 0  unless defined $vars{ADD_BLANK_LINES};
+$vars{DEFAULT_SECTION} = 'GREEN'  unless defined $vars{DEFAULT_SECTION};
 
 if (!$vars{SENDER}) {
     my $pw = getpwnam($ENV{USER}) || die "Could not retrieve current user name!\n";
@@ -90,6 +101,58 @@ ENDL
   return $t;
 }
 
+sub insert_record
+{
+  my ($file, $section, $record) = @_;
+
+  $record = $vars{BULLET} . ' ' . $record unless $record =~ m{^[\-\+\*\s\Q$vars{BULLET}\E]};
+  # print "section=$section, record=$record\n";
+
+  my $done = 0;
+  my @rag;
+  open(my $ifd, "<", $file) or die "cannot open $file: $!\n";
+  while (defined(my $line = <$ifd>)) {
+    chomp $line;
+    if ($done == 1) {
+      push @rag, "" if $vars{ADD_BLANK_LINES} and $line !~ m{^\s*$};
+      $done++; 
+    }
+
+    push @rag, $line;
+
+    if ($line =~ m{^\s*\Q$vars{SECTION_MARKER}\E\s*\Q$section\E\b}) {
+      push @rag, "" if $vars{ADD_BLANK_LINES};
+      push @rag, " " . $record;
+      $done = 1;
+    }
+  }
+  close $ifd;
+  unless ($done) {
+    push @rag, "" if $vars{ADD_BLANK_LINES};
+    push @rag, " " . $record;
+  }
+  my $text = join("\n", @rag);
+  print "$text\n";
+  open(my $ofd, ">", $file) or die "cannot open > $file: $!\n";
+  print $ofd $text;
+  close $ofd or die "write failed to $file: $!\n";
+}
+
+sub propagate_section
+{
+  my ($section, $prev, $file) = @_;
+  my $text = "FIXME: propagate_section('$section','$prev') not impl.\n";
+  if ( -f $prev )
+    {
+      # TODO: pull text from section
+    }
+  else
+    {
+      $text = "PROPAGATE ERROR: cannot open file '$prev' ($!).\nPlease see yourself for items that should be propagated here.\n";
+    }
+  insert_record($file, $section, $text);
+}
+
 ### Main starts here
 
 getopts('lw:');
@@ -119,57 +182,54 @@ unless( $weekofyear =~/^\d+$/ && 0+$weekofyear > 0 && 0+$weekofyear < 54 ) {
 my $reportFilename = "cw_" . $weekofyear . ".txt";
 my $dir = "$path/$startyear";
 my $file = "$dir/$reportFilename";
+my $prev = "$dir/cw_" . ($weekofyear-1) . ".txt";
 
 $vars{WEEK} = $weekofyear;
 $vars{YEAR} = $startyear;
 $vars{TIMESTAMP} = scalar localtime;
 
+
 unless( -e $file ) {
   unless(-e $dir) {
     mkdir "$dir"
   }
+
   if( open FILE, ">$file" ) {
     print FILE template( \%vars );
     close FILE;
+    if ($vars{PROPAGATE})
+      {
+        for my $section (split(/[,\s]+/, $vars{PROPAGATE}))
+	  {
+	    propagate_section($section, $prev, $file);
+	  }
+      }
   } else {
     print STDERR "Failed to open report file to write: $!\n";
   }
 }
 
 if (@ARGV) {
-  my $section = 'GREEN';
+  my $section = $vars{DEFAULT_SECTION};
   my $record = join(' ', @ARGV);
-  $section = $1 if $record =~ s{^(RED|AMBER|GREEN):?\s?}{};
-  $record = $vars{BULLET} . ' ' . $record unless $record =~ m{^[\-\+\*\s\Q$vars{BULLET}\E]};
-
-  my $done = 0;
-  my @rag;
-  open(my $ifd, "<", $file) or die "cannot open $file: $!\n";
-  while (defined(my $line = <$ifd>)) {
-    chomp $line;
-    if ($done == 1) {
-      push @rag, "" if $vars{ADD_BLANK_LINES} and $line !~ m{^\s*$};
-      $done++; 
+  my @sections = find_sections($file, $vars{SECTION_MARKER});
+  my $section_pat = join('|', map { "\Q$_\E" } @sections);
+  
+  if ($record =~ m{^([A-Z_]+):})
+    {
+      my $sect = $1;
+      my $section_pat2 = join("#", @sections);
+      if ("#$section_pat2#" =~ m{#(\Q$sect\E.*?)#})
+        {
+	  # expand a section prefix to full name
+	  $section = $1;
+	  $record =~ s{^\Q$sect\E:?\s*}{};
+	  print "section=$section\n";
+	}
     }
+  $section = $1 if $record =~ s{^($section_pat):?\s?}{};
 
-    push @rag, $line;
-
-    if ($line =~ m{^\s*\[$section\]}) {
-      push @rag, "" if $vars{ADD_BLANK_LINES};
-      push @rag, " " . $record;
-      $done = 1;
-    }
-  }
-  close $ifd;
-  unless ($done) {
-    push @rag, "" if $vars{ADD_BLANK_LINES};
-    push @rag, " " . $record;
-  }
-  my $text = join("\n", @rag);
-  print "$text\n";
-  open(my $ofd, ">", $file) or die "cannot open > $file: $!\n";
-  print $ofd $text;
-  close $ofd or die "write failed to $file: $!\n";
+  insert_record($file, $section, $record);
   exit 0;
 }
 
@@ -179,6 +239,23 @@ print "+ $vi $file\n";
 my @args = ($vi, $file);
 system(@args);
 
+sub find_sections
+{
+  my ($file, $marker) = @_;
+
+  my %section = ();
+  open(my $ifd, "<", $file) or die "cannot open $file: $!\n";
+  while (defined(my $line = <$ifd>)) 
+    {
+      chomp $line;
+      if ($line =~ m{^\s*\Q$vars{SECTION_MARKER}\E\b\s*([\w_]+)}) 
+        {
+          $section{$1}++;
+	}
+    }
+  return ('RED', 'AMBER', 'GREEN') unless keys %section; 
+  return (keys %section);
+}
 
 sub HELP_MESSAGE()
 {

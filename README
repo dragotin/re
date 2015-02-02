@@ -11,11 +11,23 @@ directory to $HOME/.rerc and edit the data within accordingly.
 Be careful with the syntax, the rerc must contain valid perl
 hash code, ie. value => key, separated by colons.
 
-In the rerc there is a template for new report files. The strings
-SENDER, WEEK and YEAR are replaced automatically.
+In the .rerc there is a template for new report files. The strings
+SENDER, WEEK and YEAR, etc. are replaced automatically.
+There is also a number of variables, please review and edit your ~/.rerc
+before you start.
 
 re -l opens the report from last week.
 re -w <number> opens the week number of the current year.
+
+re I have just done somthing cool, and it takes me less than a minute to add it to my weekly report.
+  -> will go into the DEFAULT_SECTION, as defined in your ~/.rerc
+
+re RED we gonna die
+re AMBER: save me
+  -> will go into the [RED] (or [AMBER]) section, no colon needed, full name provided.
+
+re UP: mabye some day I'll do this.
+  -> will go into section [UPCOMING], colon needed, only a prefix provided.
 
 Have fun and make your manager happy!
 
