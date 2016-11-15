@@ -19,8 +19,8 @@
 # Do not forget to edit the .rerc file in your home directory. Find a
 # template for .rerc in the re source dir.
 #
-# Copyright 2011-2013 Klaas Freitag <freitag@opensuse.org>
-# Copyright 2014 Juergen Weigert <jw@onncloud.com>
+# Copyright 2011-2016 Klaas Freitag <freitag@opensuse.org>
+# Copyright 2014-2016 Juergen Weigert <jw@owncloud.com>
 #
 # 2014-06-16, jw: --help output improved.
 #                 command line usage added. Examples:
