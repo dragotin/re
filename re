@@ -32,6 +32,7 @@ use strict;
 use Date::Calc qw(:all);
 use Getopt::Std;
 use User::pwent;
+use File::Path qw(make_path);
 
 $Getopt::Std::STANDARD_HELP_VERSION++;
 use vars qw ( $VERSION $opt_l $opt_w %vars $tmpl);
@@ -43,8 +44,9 @@ $path = $ENV{HOME} . "/weekly_reports" if( $ENV{HOME} );
 
 my $rcfile = "$ENV{HOME}/.rerc";
 
-if( -r "$rcfile" ) {
+$rcfile = '/etc/rerc' unless ( -r "$rcfile" );
 
+if( -r "$rcfile" ) {
     my %localvars = do  $rcfile;
     warn "Could not parse $rcfile: $!\n" unless %localvars;
     warn "Could not do $rcfile: $@\n" if $@;
@@ -52,7 +54,12 @@ if( -r "$rcfile" ) {
     $path = $localvars{RE_BASE} if( $localvars{RE_BASE} );
     $tmpl = $localvars{TEMPLATE} if( $localvars{TEMPLATE} );
     %vars = %localvars;
+} else {
+    print "WARN: Could not read config file!\n";
 }
+
+# check path and create if needed
+make_path( $path ) unless ( -e $path && -d $path );
 
 $vars{BULLET} = '-' unless defined $vars{BULLET};
 $vars{ADD_BLANK_LINES} = 0  unless defined $vars{ADD_BLANK_LINES};
