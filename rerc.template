@@ -1,9 +1,15 @@
 # copy this to your home directory into file .rerc and customize 
-# as needed. 
+# as needed. Also works for multi user if copied to /etc/rerc
+#
 # Don't forget the commas at end of lines end and leave TEMPLATE at the end.
 #
-SENDER => "John Doe",
-RE_BASE => "/home/john/weekly_reports",
+# Sender name, otherwise the users clear text name is used
+# SENDER => "John Doe",
+# 
+# Base directory for the work report files, defaults to 
+# $HOME/weekly_reports
+# RE_BASE => "/home/john/weekly_reports",
+#
 BULLET => '-',
 ADD_BLANK_LINES => 0,
 
@@ -20,8 +26,7 @@ Work report SENDER cw WEEK/YEAR
 
 
 -- 
-best regards from dragotin.
-
+re - fork us on github: http://github.com/dragotin/re
 ENDL
 
 
