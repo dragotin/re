@@ -36,7 +36,7 @@ use File::Path qw(make_path);
 
 $Getopt::Std::STANDARD_HELP_VERSION++;
 use vars qw ( $VERSION $opt_l $opt_w %vars $tmpl);
-$VERSION = '1.1';
+$VERSION = '1.2';
 
 # edit here:
 my $path = "/home/john/weekly_reports";
