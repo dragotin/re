@@ -38,10 +38,16 @@ $Getopt::Std::STANDARD_HELP_VERSION++;
 use vars qw ( $VERSION $opt_l $opt_w %vars $tmpl);
 $VERSION = '1.2';
 
-# edit here:
+#
+# edit options in the personal config file in $HOME/.rerc
+#
+
+# Initialize the base path where the reports are stored:
 my $path = "/home/john/weekly_reports";
 $path = $ENV{HOME} . "/weekly_reports" if( $ENV{HOME} );
 
+# Check if the personal config file ~/.rerc exists and read
+# it. Otherwise check for the global one in /etc/rerc
 my $rcfile = "$ENV{HOME}/.rerc";
 
 $rcfile = '/etc/rerc' unless ( -r "$rcfile" );
@@ -61,9 +67,12 @@ if( -r "$rcfile" ) {
 # check path and create if needed
 make_path( $path ) unless ( -e $path && -d $path );
 
+# More initializations
 $vars{BULLET} = '-' unless defined $vars{BULLET};
 $vars{ADD_BLANK_LINES} = 0  unless defined $vars{ADD_BLANK_LINES};
 
+# Try to read the sender value from the systems users settings
+# if they were not set in the config
 if (!$vars{SENDER}) {
     my $pw = getpwnam($ENV{USER}) || die "Could not retrieve current user name!\n";
     my ($fullname) = split(/\s*,\s*/, $pw->gecos);
@@ -130,6 +139,7 @@ my $file = "$dir/$reportFilename";
 $vars{WEEK} = $weekofyear;
 $vars{YEAR} = $startyear;
 $vars{TIMESTAMP} = scalar localtime;
+
 
 unless( -e $file ) {
   unless(-e $dir) {
