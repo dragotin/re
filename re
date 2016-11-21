@@ -33,9 +33,10 @@ use Date::Calc qw(:all);
 use Getopt::Std;
 use User::pwent;
 use File::Path qw(make_path);
+use String::ShellQuote;
 
 $Getopt::Std::STANDARD_HELP_VERSION++;
-use vars qw ( $VERSION $opt_l $opt_w %vars $tmpl);
+use vars qw ( $VERSION $opt_l $opt_w $opt_s %vars $tmpl $mode );
 $VERSION = '1.2';
 
 #
@@ -108,7 +109,7 @@ ENDL
 
 ### Main starts here
 
-getopts('lw:');
+getopts('lw:s');
 
 my ($startyear, $startmonth, $startday) = Today();
 my $weekofyear = (Week_of_Year ($startyear,$startmonth,$startday))[0];
@@ -153,58 +154,88 @@ unless( -e $file ) {
   }
 }
 
-if (@ARGV) {
-  my $section = 'GREEN';
-  my $record = join(' ', @ARGV);
-  $section = $1 if $record =~ s{^(RED|AMBER|GREEN):?\s?}{};
-  $record = $vars{BULLET} . ' ' . $record unless $record =~ m{^[\-\+\*\s\Q$vars{BULLET}\E]};
-
-  my $done = 0;
-  my @rag;
-  open(my $ifd, "<", $file) or die "cannot open $file: $!\n";
-  while (defined(my $line = <$ifd>)) {
-    chomp $line;
-    if ($done == 1) {
-      push @rag, "" if $vars{ADD_BLANK_LINES} and $line !~ m{^\s*$};
-      $done++; 
-    }
-
-    push @rag, $line;
-
-    if ($line =~ m{^\s*\[$section\]}) {
-      push @rag, "" if $vars{ADD_BLANK_LINES};
-      push @rag, " " . $record;
-      $done = 1;
-    }
-  }
-  close $ifd;
-  unless ($done) {
-    push @rag, "" if $vars{ADD_BLANK_LINES};
-    push @rag, " " . $record;
-  }
-  my $text = join("\n", @rag);
-  print "$text\n";
-  open(my $ofd, ">", $file) or die "cannot open > $file: $!\n";
-  print $ofd $text;
-  close $ofd or die "write failed to $file: $!\n";
-  exit 0;
+if( $opt_s ) {
+  send_file();
+} else {
+  edit_file();
 }
 
-my $vi = $ENV{EDITOR} || `which vim`;
-chomp $vi;
-print "+ $vi $file\n";
-my @args = ($vi, $file);
-system(@args);
+sub send_file()
+{
+  open(my $ifd, "<", $file) or die "cannot open $file: $!\n";
+  # First line(s) are assumed to be the subject
+  my $subject = <$ifd>;
+  chomp $subject;
+  if ($subject == "") {
+    $subject = "$subject".<$ifd>;
+    chomp $subject;
+  }
+  my $body;
+  while (defined(my $line = <$ifd>)) {
+    $body = "$body"."$line";
+  }
+  chomp $body;
+  close $ifd;
+  my $recipient = shell_quote $vars{RECEPIENT};
+  $body = shell_quote $body;
+  $subject = shell_quote $subject;
+  my $ret = system("xdg-email --utf8 --subject $subject --body $body $recipient");
+}
 
+sub edit_file() {
+  if (@ARGV) {
+    my $section = 'GREEN';
+    my $record = join(' ', @ARGV);
+    $section = $1 if $record =~ s{^(RED|AMBER|GREEN):?\s?}{};
+    $record = $vars{BULLET} . ' ' . $record unless $record =~ m{^[\-\+\*\s\Q$vars{BULLET}\E]};
+
+    my $done = 0;
+    my @rag;
+    open(my $ifd, "<", $file) or die "cannot open $file: $!\n";
+    while (defined(my $line = <$ifd>)) {
+      chomp $line;
+      if ($done == 1) {
+        push @rag, "" if $vars{ADD_BLANK_LINES} and $line !~ m{^\s*$};
+        $done++; 
+      }
+
+      push @rag, $line;
+
+      if ($line =~ m{^\s*\[$section\]}) {
+        push @rag, "" if $vars{ADD_BLANK_LINES};
+        push @rag, " " . $record;
+        $done = 1;
+      }
+    }
+    close $ifd;
+    unless ($done) {
+      push @rag, "" if $vars{ADD_BLANK_LINES};
+      push @rag, " " . $record;
+    }
+    my $text = join("\n", @rag);
+    print "$text\n";
+    open(my $ofd, ">", $file) or die "cannot open > $file: $!\n";
+    print $ofd $text;
+    close $ofd or die "write failed to $file: $!\n";
+    exit 0;
+  }
+
+  my $vi = $ENV{EDITOR} || `which vim`;
+  chomp $vi;
+  print "+ $vi $file\n";
+  my @args = ($vi, $file);
+  system(@args);
+}
 
 sub HELP_MESSAGE()
 {
   my ($ofd, $p, $v, $s) = @_;
-  print $ofd "\nUsage: $0 [-l | -w NN] [message ...]\n";
+  print $ofd "\nUsage: $0 [-l | -w NN | -s ] [message ...]\n";
   print $ofd Getopt::Std::help_mess($s);
   print $ofd qq{
 $0 -l opens the report from last week.
 $0 -w <number> opens the week number of the current year.
+$0 -s opens the work report in preferred email client for sending. 
 
 If an optional message is provided, the message is added to 
 one of the sections of the report. The default section is GREEN. 
