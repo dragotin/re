@@ -35,7 +35,7 @@ use User::pwent;
 use File::Path qw(make_path);
 
 $Getopt::Std::STANDARD_HELP_VERSION++;
-use vars qw ( $VERSION $opt_l $opt_w %vars $tmpl);
+use vars qw ( $VERSION $opt_l $opt_w $opt_s %vars $tmpl $mode );
 $VERSION = '1.2';
 
 #
@@ -51,6 +51,8 @@ $path = $ENV{HOME} . "/weekly_reports" if( $ENV{HOME} );
 my $rcfile = "$ENV{HOME}/.rerc";
 
 $rcfile = '/etc/rerc' unless ( -r "$rcfile" );
+
+$rcfile = './rerc' unless ( -r "$rcfile" ); # last resort, dev only.
 
 if( -r "$rcfile" ) {
     my %localvars = do  $rcfile;
@@ -108,7 +110,7 @@ ENDL
 
 ### Main starts here
 
-getopts('lw:');
+getopts('lw:s');
 
 my ($startyear, $startmonth, $startday) = Today();
 my $weekofyear = (Week_of_Year ($startyear,$startmonth,$startday))[0];
@@ -153,58 +155,100 @@ unless( -e $file ) {
   }
 }
 
-if (@ARGV) {
-  my $section = 'GREEN';
-  my $record = join(' ', @ARGV);
-  $section = $1 if $record =~ s{^(RED|AMBER|GREEN):?\s?}{};
-  $record = $vars{BULLET} . ' ' . $record unless $record =~ m{^[\-\+\*\s\Q$vars{BULLET}\E]};
-
-  my $done = 0;
-  my @rag;
-  open(my $ifd, "<", $file) or die "cannot open $file: $!\n";
-  while (defined(my $line = <$ifd>)) {
-    chomp $line;
-    if ($done == 1) {
-      push @rag, "" if $vars{ADD_BLANK_LINES} and $line !~ m{^\s*$};
-      $done++; 
-    }
-
-    push @rag, $line;
-
-    if ($line =~ m{^\s*\[$section\]}) {
-      push @rag, "" if $vars{ADD_BLANK_LINES};
-      push @rag, " " . $record;
-      $done = 1;
-    }
-  }
-  close $ifd;
-  unless ($done) {
-    push @rag, "" if $vars{ADD_BLANK_LINES};
-    push @rag, " " . $record;
-  }
-  my $text = join("\n", @rag);
-  print "$text\n";
-  open(my $ofd, ">", $file) or die "cannot open > $file: $!\n";
-  print $ofd $text;
-  close $ofd or die "write failed to $file: $!\n";
-  exit 0;
+if( $opt_s ) {
+  send_file();
+} else {
+  edit_file();
 }
 
-my $vi = $ENV{EDITOR} || `which vim`;
-chomp $vi;
-print "+ $vi $file\n";
-my @args = ($vi, $file);
-system(@args);
+sub escape_shell_param($) {
+   my ($par) = @_;
+   $par =~ s/'/'"'"'/g;  # "escape" all single quotes
+   return $par;
+   # return "'$par'";      # single-quote entire string
+ }
 
+sub send_file()
+{
+  open(my $ifd, "<", $file) or die "cannot open $file: $!\n";
+  my @content = <$ifd>;
+  close $ifd;
+
+  # First line(s) are assumed to be the subject
+  my $subject = shift @content;
+  if ($subject == "") {
+    $subject = shift @content;
+  }
+  chomp $subject;
+
+  my $body = join( //, @content);
+  chomp $body;
+
+  my @cmd;
+  push @cmd, '--utf8';
+  push @cmd, '--subject';
+  push @cmd, escape_shell_param( $subject );
+  push @cmd, '--body';
+  push @cmd, escape_shell_param( $body );
+  push @cmd, escape_shell_param( $vars{RECIPIENT} ) if defined( $vars{RECIPIENT} );
+
+  my $ret = system('xdg-email', @cmd );
+}
+
+sub edit_file() {
+  if (@ARGV) {
+    my $section = 'GREEN';
+    my $record = join(' ', @ARGV);
+    $section = $1 if $record =~ s{^(RED|AMBER|GREEN):?\s?}{};
+    $record = $vars{BULLET} . ' ' . $record unless $record =~ m{^[\-\+\*\s\Q$vars{BULLET}\E]};
+
+    my $done = 0;
+    my @rag;
+    open(my $ifd, "<", $file) or die "cannot open $file: $!\n";
+    while (defined(my $line = <$ifd>)) {
+      chomp $line;
+      if ($done == 1) {
+        push @rag, "" if $vars{ADD_BLANK_LINES} and $line !~ m{^\s*$};
+        $done++; 
+      }
+
+      push @rag, $line;
+
+      if ($line =~ m{^\s*\[$section\]}) {
+        push @rag, "" if $vars{ADD_BLANK_LINES};
+        push @rag, " " . $record;
+        $done = 1;
+      }
+    }
+    close $ifd;
+    unless ($done) {
+      push @rag, "" if $vars{ADD_BLANK_LINES};
+      push @rag, " " . $record;
+    }
+    my $text = join("\n", @rag);
+    print "$text\n";
+    open(my $ofd, ">", $file) or die "cannot open > $file: $!\n";
+    print $ofd $text;
+    close $ofd or die "write failed to $file: $!\n";
+    exit 0;
+  }
+
+  my $vi = $ENV{EDITOR} || `which vim`;
+  chomp $vi;
+  print "+ $vi $file\n";
+  my @args = ($file);
+  system($vi, @args);
+}
 
 sub HELP_MESSAGE()
 {
   my ($ofd, $p, $v, $s) = @_;
-  print $ofd "\nUsage: $0 [-l | -w NN] [message ...]\n";
+  print $ofd "\nUsage: $0 [-l | -w NN | -s ] [message ...]\n";
   print $ofd Getopt::Std::help_mess($s);
   print $ofd qq{
 $0 -l opens the report from last week.
 $0 -w <number> opens the week number of the current year.
+$0 -s opens the work report in preferred email client for sending. 
 
 If an optional message is provided, the message is added to 
 one of the sections of the report. The default section is GREEN. 
