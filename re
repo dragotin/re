@@ -33,7 +33,6 @@ use Date::Calc qw(:all);
 use Getopt::Std;
 use User::pwent;
 use File::Path qw(make_path);
-use String::ShellQuote;
 
 $Getopt::Std::STANDARD_HELP_VERSION++;
 use vars qw ( $VERSION $opt_l $opt_w $opt_s %vars $tmpl $mode );
@@ -52,6 +51,8 @@ $path = $ENV{HOME} . "/weekly_reports" if( $ENV{HOME} );
 my $rcfile = "$ENV{HOME}/.rerc";
 
 $rcfile = '/etc/rerc' unless ( -r "$rcfile" );
+
+$rcfile = './rerc' unless ( -r "$rcfile" ); # last resort, dev only.
 
 if( -r "$rcfile" ) {
     my %localvars = do  $rcfile;
@@ -160,26 +161,38 @@ if( $opt_s ) {
   edit_file();
 }
 
+sub escape_shell_param($) {
+   my ($par) = @_;
+   $par =~ s/'/'"'"'/g;  # "escape" all single quotes
+   return $par;
+   # return "'$par'";      # single-quote entire string
+ }
+
 sub send_file()
 {
   open(my $ifd, "<", $file) or die "cannot open $file: $!\n";
-  # First line(s) are assumed to be the subject
-  my $subject = <$ifd>;
-  chomp $subject;
-  if ($subject == "") {
-    $subject = "$subject".<$ifd>;
-    chomp $subject;
-  }
-  my $body;
-  while (defined(my $line = <$ifd>)) {
-    $body = "$body"."$line";
-  }
-  chomp $body;
+  my @content = <$ifd>;
   close $ifd;
-  my $recipient = shell_quote $vars{RECEPIENT};
-  $body = shell_quote $body;
-  $subject = shell_quote $subject;
-  my $ret = system("xdg-email --utf8 --subject $subject --body $body $recipient");
+
+  # First line(s) are assumed to be the subject
+  my $subject = shift @content;
+  if ($subject == "") {
+    $subject = shift @content;
+  }
+  chomp $subject;
+
+  my $body = join( //, @content);
+  chomp $body;
+
+  my @cmd;
+  push @cmd, '--utf8';
+  push @cmd, '--subject';
+  push @cmd, escape_shell_param( $subject );
+  push @cmd, '--body';
+  push @cmd, escape_shell_param( $body );
+  push @cmd, escape_shell_param( $vars{RECIPIENT} ) if defined( $vars{RECIPIENT} );
+
+  my $ret = system('xdg-email', @cmd );
 }
 
 sub edit_file() {
@@ -223,8 +236,8 @@ sub edit_file() {
   my $vi = $ENV{EDITOR} || `which vim`;
   chomp $vi;
   print "+ $vi $file\n";
-  my @args = ($vi, $file);
-  system(@args);
+  my @args = ($file);
+  system($vi, @args);
 }
 
 sub HELP_MESSAGE()
