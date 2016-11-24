@@ -37,7 +37,7 @@ use IPC::Run qw( run timeout );
 
 $Getopt::Std::STANDARD_HELP_VERSION++;
 use vars qw ( $VERSION $opt_l $opt_w $opt_s $opt_o %vars $tmpl $mode );
-$VERSION = '1.3';
+$VERSION = '1.4';
 
 #
 # edit options in the personal config file in $HOME/.rerc
