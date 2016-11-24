@@ -33,9 +33,10 @@ use Date::Calc qw(:all);
 use Getopt::Std;
 use User::pwent;
 use File::Path qw(make_path);
+use IPC::Run qw( run timeout );
 
 $Getopt::Std::STANDARD_HELP_VERSION++;
-use vars qw ( $VERSION $opt_l $opt_w $opt_s %vars $tmpl $mode );
+use vars qw ( $VERSION $opt_l $opt_w $opt_s $opt_o %vars $tmpl $mode );
 $VERSION = '1.3';
 
 #
@@ -81,6 +82,28 @@ if (!$vars{SENDER}) {
     $vars{SENDER} = "$fullname";
 }
 
+sub syncWithOwnCloud()
+{
+    my $owncloudcmd = $vars{OWNCLOUDCMD_BINARY} || '/usr/bin/owncloudcmd';
+
+    my $url = $vars{OWNCLOUD_WEBDAV_URL};
+    if( $url && -x $owncloudcmd ) {
+        my @args;
+        @args = ( $owncloudcmd, '--trust', '-n', '--non-interactive' );
+        push @args, $path;
+        push @args, $url;
+
+        my $in;
+        my $out;
+        my $err;
+        run \@args, \$in, \$out, \$err, timeout( 120 ) or die "cat: $?"
+
+        # system( $owncloudcmd, @args );
+    }
+    return 1; # return success to repeat it afterwards
+}
+
+
 sub template( $ )
 {
   my ($params) = @_;
@@ -110,7 +133,7 @@ ENDL
 
 ### Main starts here
 
-getopts('lw:s');
+getopts('lw:so');
 
 my ($startyear, $startmonth, $startday) = Today();
 my $weekofyear = (Week_of_Year ($startyear,$startmonth,$startday))[0];
@@ -132,7 +155,11 @@ unless( $weekofyear =~/^\d+$/ && 0+$weekofyear > 0 && 0+$weekofyear < 54 ) {
   exit 1;
 }
 
-# ===
+# === ownCloud sync:
+if( $opt_o ) {
+    # Check the required configuration values
+    $opt_o = syncWithOwnCloud();
+}
 
 my $reportFilename = "cw_" . $weekofyear . ".txt";
 my $dir = "$path/$startyear";
@@ -238,6 +265,13 @@ sub edit_file() {
   print "+ $vi $file\n";
   my @args = ($file);
   system($vi, @args);
+}
+
+# === ownCloud sync:
+if( $opt_o ) {
+    print "Syncing with ownCloud...\n";
+
+    $opt_o = syncWithOwnCloud();
 }
 
 sub HELP_MESSAGE()
