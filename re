@@ -36,7 +36,7 @@ use File::Path qw(make_path);
 
 $Getopt::Std::STANDARD_HELP_VERSION++;
 use vars qw ( $VERSION $opt_l $opt_w $opt_s %vars $tmpl $mode );
-$VERSION = '1.2';
+$VERSION = '1.3';
 
 #
 # edit options in the personal config file in $HOME/.rerc
