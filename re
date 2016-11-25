@@ -36,50 +36,55 @@ use File::Path qw(make_path);
 use IPC::Run qw( run timeout );
 
 $Getopt::Std::STANDARD_HELP_VERSION++;
-use vars qw ( $VERSION $opt_l $opt_w $opt_s $opt_o %vars $tmpl $mode );
+use vars qw ( $VERSION $opt_l $opt_w $opt_s $opt_o $opt_c %vars );
 $VERSION = '1.4';
 
 #
 # edit options in the personal config file in $HOME/.rerc
 #
 
-# Initialize the base path where the reports are stored:
-my $path = "/home/john/weekly_reports";
-$path = $ENV{HOME} . "/weekly_reports" if( $ENV{HOME} );
+sub init_config()
+{
+    # Initialize the base path where the reports are stored:
+    my $path = "/home/john/weekly_reports";
+    $path = $ENV{HOME} . "/weekly_reports" if( $ENV{HOME} );
 
-# Check if the personal config file ~/.rerc exists and read
-# it. Otherwise check for the global one in /etc/rerc
-my $rcfile = "$ENV{HOME}/.rerc";
+    # Check if the personal config file ~/.rerc exists and read
+    # it. Otherwise check for the global one in /etc/rerc
+    my $rcfile = "$ENV{HOME}/.rerc";
 
-$rcfile = '/etc/rerc' unless ( -r "$rcfile" );
+    $rcfile = '/etc/rerc' unless ( -r "$rcfile" );
 
-$rcfile = './rerc' unless ( -r "$rcfile" ); # last resort, dev only.
+    $rcfile = './rerc' unless ( -r "$rcfile" ); # last resort, dev only.
 
-if( -r "$rcfile" ) {
-    my %localvars = do  $rcfile;
-    warn "Could not parse $rcfile: $!\n" unless %localvars;
-    warn "Could not do $rcfile: $@\n" if $@;
+    if( -r "$rcfile" ) {
+        my %localvars = do  $rcfile;
+        warn "Could not parse $rcfile: $!\n" unless %localvars;
+        warn "Could not do $rcfile: $@\n" if $@;
 
-    $path = $localvars{RE_BASE} if( $localvars{RE_BASE} );
-    $tmpl = $localvars{TEMPLATE} if( $localvars{TEMPLATE} );
-    %vars = %localvars;
-} else {
-    print "WARN: Could not read config file!\n";
-}
+        $path = $localvars{RE_BASE} if( $localvars{RE_BASE} );
+        $vars{TEMPLATE} = $localvars{TEMPLATE} if( $localvars{TEMPLATE} );
+        %vars = %localvars;
+    } else {
+        print "WARN: Could not read config file!\n";
+    }
+   $vars{BASE_PATH} = $path;
+ 
+    # check path and create if needed
+    make_path( $path ) unless ( -e $path && -d $path );
 
-# check path and create if needed
-make_path( $path ) unless ( -e $path && -d $path );
+    # More initializations
+    $vars{BULLET} = '-' unless defined $vars{BULLET};
+    $vars{ADD_BLANK_LINES} = 0  unless defined $vars{ADD_BLANK_LINES};
+    
+    # Try to read the sender value from the systems users settings
+    # if they were not set in the config
+    if (!$vars{SENDER}) {
+        my $pw = getpwnam($ENV{USER}) || die "Could not retrieve current user name!\n";
+        my ($fullname) = split(/\s*,\s*/, $pw->gecos);
+        $vars{SENDER} = "$fullname";
+    }
 
-# More initializations
-$vars{BULLET} = '-' unless defined $vars{BULLET};
-$vars{ADD_BLANK_LINES} = 0  unless defined $vars{ADD_BLANK_LINES};
-
-# Try to read the sender value from the systems users settings
-# if they were not set in the config
-if (!$vars{SENDER}) {
-    my $pw = getpwnam($ENV{USER}) || die "Could not retrieve current user name!\n";
-    my ($fullname) = split(/\s*,\s*/, $pw->gecos);
-    $vars{SENDER} = "$fullname";
 }
 
 sub syncWithOwnCloud()
@@ -90,7 +95,7 @@ sub syncWithOwnCloud()
     if( $url && -x $owncloudcmd ) {
         my @args;
         @args = ( $owncloudcmd, '--trust', '-n', '--non-interactive' );
-        push @args, $path;
+        push @args, $vars{BASE_PATH};
         push @args, $url;
 
         my $in;
@@ -121,9 +126,7 @@ Work report SENDER cw WEEK/YEAR
 ENDL
 ;
 
-  $t = $tmpl if( $tmpl );
-
-# never never never edit below this.
+  $t = $vars{TEMPLATE} if( $vars{TEMPLATE} );
 
   while( my ($key, $value) = each(%$params)) {
     $t =~ s/\b$key\b/$value/gm;
@@ -133,7 +136,10 @@ ENDL
 
 ### Main starts here
 
-getopts('lw:so');
+getopts('lw:soc:');
+
+# read the config file
+init_config();
 
 my ($startyear, $startmonth, $startday) = Today();
 my $weekofyear = (Week_of_Year ($startyear,$startmonth,$startday))[0];
@@ -162,7 +168,7 @@ if( $opt_o ) {
 }
 
 my $reportFilename = "cw_" . $weekofyear . ".txt";
-my $dir = "$path/$startyear";
+my $dir = "$vars{BASE_PATH}/$startyear";
 my $file = "$dir/$reportFilename";
 
 $vars{WEEK} = $weekofyear;
