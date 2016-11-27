@@ -1,7 +1,9 @@
 # copy this to your home directory into file .rerc and customize 
 # as needed. Also works for multi user if copied to /etc/rerc
 #
-# Don't forget the commas at end of lines end and leave TEMPLATE at the end.
+# Remember that this needs to be valid perl syntax!
+# Don't forget the commas at end of lines and use the => for 
+# assignment. Best is to leave TEMPLATE at the end.
 #
 # Sender name, otherwise the users clear text name is used
 # SENDER => "John Doe",
@@ -10,9 +12,43 @@
 # $HOME/weekly_reports
 # RE_BASE => "/home/john/weekly_reports",
 #
+
+#
+# Character to be used as bullet at line begin
+#
 BULLET => '-',
+
+#
+# Add a blank line after entries that were added through command line, 
+# not in the editor
+#
 ADD_BLANK_LINES => 0,
 
+# 
+# ownCloud cmd binary: Enter the path to the tool owncloudcmd, shipped
+# with the owncloud desktop client. Defaults to /usr/bin/owncloudcmd
+# OWNCLOUD_CMD_BINARY => '/my/path/to/owncloudcmd',
+
+#
+# The url to the WebDAV server of your ownCloud instance. Note that the
+# part 'remote.php/webdav' is required for most installations. Append 
+# the target path in your ownCloud installation to that.
+#
+# The default is empty, which means there is no ownCloud sync.
+# OWNCLOUD_WEBDAV_URL => 'https://owncloud.myserver.de/remote.php/webdav/weekly_reports',
+
+#
+# ownCloud SSL handling: Set to 1 if you want to trust an insecure
+# SSL connection.
+# OWNCLOUD_TRUST_SSL => 0,
+
+#
+# ownCloud show logging - dump the log of the sync.
+# OWNCLOUD_DEBUG => 1,
+
+#
+# The template of the report. Mind the syntax for multi line.
+# See https://perlmaven.com/here-documents
 TEMPLATE =><<ENDL
 
 Work report SENDER cw WEEK/YEAR

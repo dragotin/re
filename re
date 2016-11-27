@@ -46,8 +46,7 @@ $VERSION = '1.4';
 sub init_config()
 {
     # Initialize the base path where the reports are stored:
-    my $path = "/home/john/weekly_reports";
-    $path = $ENV{HOME} . "/weekly_reports" if( $ENV{HOME} );
+    my $path = $ENV{HOME} . "/weekly_reports" if( $ENV{HOME} );
 
     # Check if the personal config file ~/.rerc exists and read
     # it. Otherwise check for the global one in /etc/rerc
@@ -84,28 +83,35 @@ sub init_config()
         my ($fullname) = split(/\s*,\s*/, $pw->gecos);
         $vars{SENDER} = "$fullname";
     }
-
 }
 
-sub syncWithOwnCloud()
+sub ownCloud_sync()
 {
-    my $owncloudcmd = $vars{OWNCLOUDCMD_BINARY} || '/usr/bin/owncloudcmd';
+    my $owncloudcmd = $vars{OWNCLOUD_CMD_BINARY} || '/usr/bin/owncloudcmd';
+    return 0 unless ( -x $owncloudcmd );
+
+    my $result = 0;
 
     my $url = $vars{OWNCLOUD_WEBDAV_URL};
-    if( $url && -x $owncloudcmd ) {
+    if( $url ) {
         my @args;
-        @args = ( $owncloudcmd, '--trust', '-n', '--non-interactive' );
+        @args = ( $owncloudcmd, '-n', '--non-interactive' );
+        push @args, '--trust' if( $vars{OWNCLOUD_TRUST_SSL} );
         push @args, $vars{BASE_PATH};
         push @args, $url;
+
+        print "Syncing with ownCloud...\n";
 
         my $in;
         my $out;
         my $err;
-        run \@args, \$in, \$out, \$err, timeout( 120 ) or die "cat: $?"
+        $result = run \@args, \$in, \$out, \$err, timeout( 120 );
 
-        # system( $owncloudcmd, @args );
+        if( $vars{OWNCLOUD_DEBUG} ) {
+            print $out;
+        }
     }
-    return 1; # return success to repeat it afterwards
+    return $result; # return success to repeat it afterwards
 }
 
 
@@ -134,66 +140,6 @@ ENDL
   return $t;
 }
 
-### Main starts here
-
-getopts('lw:soc:');
-
-# read the config file
-init_config();
-
-my ($startyear, $startmonth, $startday) = Today();
-my $weekofyear = (Week_of_Year ($startyear,$startmonth,$startday))[0];
-
-if( $opt_l ) {
-  $weekofyear--;
-  if( $weekofyear == 0 ) {
-    print STDERR "Better make holiday than writing work reports!\n";
-    exit 1;
-  }
-}
-
-if( $opt_w ) {
-  $weekofyear = $opt_w;
-}
-
-unless( $weekofyear =~/^\d+$/ && 0+$weekofyear > 0 && 0+$weekofyear < 54 ) {
-  print STDERR "Better give me a good week number, not $weekofyear!\n";
-  exit 1;
-}
-
-# === ownCloud sync:
-if( $opt_o ) {
-    # Check the required configuration values
-    $opt_o = syncWithOwnCloud();
-}
-
-my $reportFilename = "cw_" . $weekofyear . ".txt";
-my $dir = "$vars{BASE_PATH}/$startyear";
-my $file = "$dir/$reportFilename";
-
-$vars{WEEK} = $weekofyear;
-$vars{YEAR} = $startyear;
-$vars{TIMESTAMP} = scalar localtime;
-
-
-unless( -e $file ) {
-  unless(-e $dir) {
-    mkdir "$dir"
-  }
-  if( open FILE, ">$file" ) {
-    print FILE template( \%vars );
-    close FILE;
-  } else {
-    print STDERR "Failed to open report file to write: $!\n";
-  }
-}
-
-if( $opt_s ) {
-  send_file();
-} else {
-  edit_file();
-}
-
 sub escape_shell_param($) {
    my ($par) = @_;
    $par =~ s/'/'"'"'/g;  # "escape" all single quotes
@@ -201,8 +147,10 @@ sub escape_shell_param($) {
    # return "'$par'";      # single-quote entire string
  }
 
-sub send_file()
+sub send_file($)
 {
+  my ($file) = @_;
+
   open(my $ifd, "<", $file) or die "cannot open $file: $!\n";
   my @content = <$ifd>;
   close $ifd;
@@ -226,9 +174,13 @@ sub send_file()
   push @cmd, escape_shell_param( $vars{RECIPIENT} ) if defined( $vars{RECIPIENT} );
 
   my $ret = system('xdg-email', @cmd );
+
+  return $ret;
 }
 
-sub edit_file() {
+sub edit_file($) {
+  my ($file) = @_;
+
   if (@ARGV) {
     my $section = 'GREEN';
     my $record = join(' ', @ARGV);
@@ -263,21 +215,13 @@ sub edit_file() {
     open(my $ofd, ">", $file) or die "cannot open > $file: $!\n";
     print $ofd $text;
     close $ofd or die "write failed to $file: $!\n";
-    exit 0;
+  } else {
+    my $vi = $ENV{EDITOR} || `which vim`;
+    chomp $vi;
+    print "+ $vi $file\n";
+    my @args = ($file);
+    system($vi, @args);
   }
-
-  my $vi = $ENV{EDITOR} || `which vim`;
-  chomp $vi;
-  print "+ $vi $file\n";
-  my @args = ($file);
-  system($vi, @args);
-}
-
-# === ownCloud sync:
-if( $opt_o ) {
-    print "Syncing with ownCloud...\n";
-
-    $opt_o = syncWithOwnCloud();
 }
 
 sub HELP_MESSAGE()
@@ -289,6 +233,7 @@ sub HELP_MESSAGE()
 $0 -l opens the report from last week.
 $0 -w <number> opens the week number of the current year.
 $0 -s opens the work report in preferred email client for sending. 
+$0 -o syncs the week reports to ownCloud before and after editing.
 
 If an optional message is provided, the message is added to 
 one of the sections of the report. The default section is GREEN. 
@@ -301,3 +246,65 @@ When called without a message, $0 will start an EDITOR.
 };
 
 }
+
+### Main starts here
+
+getopts('lw:soc:');
+
+# read the config file
+init_config();
+
+my ($startyear, $startmonth, $startday) = Today();
+my $weekofyear = (Week_of_Year ($startyear,$startmonth,$startday))[0];
+
+if( $opt_l ) {
+  $weekofyear--;
+  if( $weekofyear == 0 ) {
+    print STDERR "Better make holiday than writing work reports!\n";
+    exit 1;
+  }
+}
+
+if( $opt_w ) {
+  $weekofyear = $opt_w;
+}
+
+unless( $weekofyear =~/^\d+$/ && 0+$weekofyear > 0 && 0+$weekofyear < 54 ) {
+  print STDERR "Better give me a good week number, not $weekofyear!\n";
+  exit 1;
+}
+
+# === ownCloud sync:
+if( $opt_o ) {
+    $opt_o = ownCloud_sync();
+}
+
+my $reportFilename = "cw_" . $weekofyear . ".txt";
+my $dir = "$vars{BASE_PATH}/$startyear";
+my $file = "$dir/$reportFilename";
+
+$vars{WEEK} = $weekofyear;
+$vars{YEAR} = $startyear;
+$vars{TIMESTAMP} = scalar localtime;
+
+# If the file does not exist, fill it with the template.
+unless( -e $file ) {
+  if( open FILE, ">$file" ) {
+    print FILE template( \%vars );
+    close FILE;
+  } else {
+    die "Failed to open report file to write: $!\n";
+  }
+}
+
+if( $opt_s ) {
+  send_file($file);
+} else {
+  edit_file($file);
+  # === ownCloud sync, only do after edit again.
+  if( $opt_o ) {
+    $opt_o = ownCloud_sync();
+  }
+}
+
+# end.
