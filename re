@@ -224,22 +224,31 @@ sub edit_file($) {
 sub HELP_MESSAGE()
 {
   my ($ofd, $p, $v, $s) = @_;
-  print $ofd "\nUsage: $0 [-l | -w NN | -s ] [message ...]\n";
+  print $ofd "\nUsage: $0 [-l | -w NN | -s | -o] [message ...]\n";
   print $ofd Getopt::Std::help_mess($s);
-  print $ofd qq{
+  print $ofd q{
 $0 -l opens the report from last week.
 $0 -w <number> opens the week number of the current year.
 $0 -s opens the work report in preferred email client for sending. 
-$0 -o syncs the week reports to ownCloud before and after editing.
+$0 -o syncs the weekly report to ownCloud before and after editing.
 
 If an optional message is provided, the message is added to 
 one of the sections of the report. The default section is GREEN. 
 If the first word of the message is an all uppercase RED, AMBER, 
 or GREEN then this is used as a section name.
+
 If the message text does not start with one of '*', '+', '-', or ' '
 then a '* ' prefix will be added in attempt to produce a bullet list.
 
-When called without a message, $0 will start an EDITOR.
+When re is called without a message, $0 will start an editor as 
+specified in the $EDITOR environment variable.
+
+If re is called with the option -o, it will synchronize the entire
+work report directory to ownCloud. This way, re can be used from 
+more than one computer without hassle as ownCloud is the central
+data hub. This setting requires special settings in the rerc file,
+see the template for additional documentation of the values.
+
 };
 
 }
