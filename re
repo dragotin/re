@@ -140,13 +140,6 @@ ENDL
   return $t;
 }
 
-sub escape_shell_param($) {
-   my ($par) = @_;
-   $par =~ s/'/'"'"'/g;  # "escape" all single quotes
-   return $par;
-   # return "'$par'";      # single-quote entire string
- }
-
 sub send_file($)
 {
   my ($file) = @_;
@@ -168,10 +161,10 @@ sub send_file($)
   my @cmd;
   push @cmd, '--utf8';
   push @cmd, '--subject';
-  push @cmd, escape_shell_param( $subject );
+  push @cmd, $subject;
   push @cmd, '--body';
-  push @cmd, escape_shell_param( $body );
-  push @cmd, escape_shell_param( $vars{RECIPIENT} ) if defined( $vars{RECIPIENT} );
+  push @cmd, $body;
+  push @cmd, $vars{RECIPIENT} if defined( $vars{RECIPIENT} );
 
   my $ret = system('xdg-email', @cmd );
 

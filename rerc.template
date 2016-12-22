@@ -6,7 +6,13 @@
 # assignment. Best is to leave TEMPLATE at the end.
 #
 # Sender name, otherwise the users clear text name is used
-# SENDER => "John Doe",
+# SENDER => q "John Doe",
+#
+# Recipient name and Email, as used when re is called with the -s
+# switch to open the report in the mail client. Make sure to
+# properly quote any '@' in the email address, best by using the
+# perl built in function q( ).
+# RECIPIENT => q "Goof <goof@universe.com>",
 # 
 # Base directory for the work report files, defaults to 
 # $HOME/weekly_reports
