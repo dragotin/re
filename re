@@ -108,8 +108,12 @@ sub ownCloud_sync()
         $result = run \@args, \$in, \$out, \$err, timeout( 120 );
 
         if( $vars{OWNCLOUD_DEBUG} ) {
-            print $out;
+            my $dbg = $out;
+            $dbg .= $err;
+            print STDERR "ownCloud cmd log:\n$dbg\n========\n";
         }
+    } else {
+        print STDERR "ERR: Can not sync to ownCloud because the URL is empty!\n";
     }
     return $result; # return success to repeat it afterwards
 }
