@@ -1,4 +1,4 @@
-# re - Work Report Writing Made Easy
+# re - Work Reports Made Easy
 
 re is your tool to organize weekly work reports which employees often have
 to write to their management. The reports are kept in normal text
