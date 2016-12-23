@@ -43,6 +43,9 @@ tool called owncloudcmd that comes with the ownCloud sync client.
 
 Check the configuration template for the ownCloud sync options.
 
+Attention: To not to have to deal with credentials, re calls `owncloudcmd`
+with option `-n`. That tells the tool to read the ownCloud credentials
+from .netrc. You have to configure it there.
 
 ## Options
 

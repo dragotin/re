@@ -37,11 +37,16 @@ ADD_BLANK_LINES => 0,
 
 #
 # The url to the WebDAV server of your ownCloud instance. Note that the
-# part 'remote.php/webdav' is required for most installations. Append 
+# part 'remote.php/webdav' is required for most installations. Append
 # the target path in your ownCloud installation to that.
 #
 # The default is empty, which means there is no ownCloud sync.
 # OWNCLOUD_WEBDAV_URL => 'https://owncloud.myserver.de/remote.php/webdav/weekly_reports',
+
+# Attention: To not to have to deal with ownCloud credentials, re calls
+# owncloudcmd with option -n. That tells the tool to read the ownCloud
+# credentials from .netrc. You have to configure it there. Ask the
+# internet about details about netrc.
 
 #
 # ownCloud SSL handling: Set to 1 if you want to trust an insecure
