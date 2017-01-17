@@ -293,6 +293,14 @@ $vars{WEEK} = $weekofyear;
 $vars{YEAR} = $startyear;
 $vars{TIMESTAMP} = scalar localtime;
 
+# New install: the report dir might not exist
+# New year: The year subdir might not exist
+unless( -e $dir ) {
+  make_path( $dir )
+} else {
+  die "Failed to create report directory: $!\n";
+}
+
 # If the file does not exist, fill it with the template.
 unless( -e $file ) {
   if( open FILE, ">$file" ) {
