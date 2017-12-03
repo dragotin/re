@@ -293,13 +293,16 @@ $vars{WEEK} = $weekofyear;
 $vars{YEAR} = $startyear;
 $vars{TIMESTAMP} = scalar localtime;
 
+# If the year directory does not exist, create it.
+make_path( $dir ) unless ( -e $dir && -d $dir );
+
 # If the file does not exist, fill it with the template.
 unless( -e $file ) {
   if( open FILE, ">$file" ) {
     print FILE template( \%vars );
     close FILE;
   } else {
-    die "Failed to open report file to write: $!\n";
+    die "Failed to open report file to write: $!\n$file\n";
   }
 }
 
