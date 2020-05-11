@@ -144,6 +144,7 @@ ENDL
   }
 
   if ( $legacy ) {
+    print STDERR 'WARN: No @@-style keys found in template. Switching to legacy mode.\n';
     while( my ($key, $value) = each(%$params)) {
       $t =~ s/\b$key\b/$value/gm;
     }
