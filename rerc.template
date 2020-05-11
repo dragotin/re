@@ -60,9 +60,9 @@ ADD_BLANK_LINES => 0,
 #
 # The template of the report. Mind the syntax for multi line.
 # See https://perlmaven.com/here-documents
-TEMPLATE =><<ENDL
+TEMPLATE =><<'ENDL'
 
-Work report SENDER cw WEEK/YEAR
+Work report @SENDER@ cw @WEEK@/@YEAR@
 
 [RED]
 
