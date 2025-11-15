@@ -122,9 +122,9 @@ sub ownCloud_sync()
 sub template( $ )
 {
   my ($params) = @_;
-  my $t =<<ENDL
+  my $t =<<'ENDL'
 
-Work report SENDER cw WEEK/YEAR
+Work report @SENDER@ cw @WEEK@/@YEAR@
 
 [RED]
 
@@ -138,8 +138,16 @@ ENDL
 
   $t = $vars{TEMPLATE} if( $vars{TEMPLATE} );
 
+  my $legacy = 1;
   while( my ($key, $value) = each(%$params)) {
-    $t =~ s/\b$key\b/$value/gm;
+    if ($t =~ s/\@$key\@/$value/gm) { $legacy=0; }
+  }
+
+  if ( $legacy ) {
+    print STDERR 'WARN: No @@-style keys found in template. Switching to legacy mode.\n';
+    while( my ($key, $value) = each(%$params)) {
+      $t =~ s/\b$key\b/$value/gm;
+    }
   }
   return $t;
 }
